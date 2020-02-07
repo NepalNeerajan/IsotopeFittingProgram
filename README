@@ -1,0 +1,49 @@
+--------- Notes for Fitting Program ---------
+- Neerajan Nepal (nepal1n@cmich.edu)
+
+1. To fit the decay histogram for given isotope (e.g. Rb102), following commands are executed in the root command line,
+
+root$ .L FittingCode_v2.C+
+
+root$ FittingIsotope(TString isoName, Int_t AtNo, Int_t NeuNo, char* decayFile, char* bkgFile, double st, double et)
+
+Here, isoName is the name of the isotope to be fitted with its mass number(e.g Rb102) 
+
+AtNo is the atomic number (e.g. for Rb102, it is 37)
+
+NeuNo is the neutron number (e.g. for Rb102, it is 65)
+
+decayFile is the root file which has decay histograms for the given isotope. these decay histograms are stored inside /home/neerajan/decayHistograms/
+
+bkgFile is the text file which has the information of the background counts from decay histograms, neutron efficiency and total number of decay activity. This text file is different for different isotopes and named as bkg_isoName.txt (e.g. bkg_Rb102.txt). Its direcotry is /home/neerajan/newFittingCodeV2/bkgFiles/
+
+double st is the starting time in the decay histogram or in fitting program. It's unit is in ms.
+
+double et is the ending time in the decay histogram or in fitting program. It's unit is also in ms.
+
+For example, to fit the isotope Rb102, following syntax is used in the root terminal, 
+FittingIsotope("Rb102",37,65,"../decayHistograms/DecayRb102_veto_new.root","bkgFile/bkg_Rb102.txt",-10000,10000)
+
+
+2. parameter.txt file is used to initialize the fitting parameters in the fitting program. It has the information of the isotopes in the following format,
+AtNo NeuNo HalfLife(ms) HalfLifeLowerError(ms) HalfLifeUpperError(ms) P1n(%) P1nLowerError(%) P1nUpperError(%) P2n(%) P2nLowerError(%) P2nUpperError(%)
+The details about these parameters are given in the attached google spreadsheet link (https://docs.google.com/spreadsheets/d/1FFGGlAJCs0FeuRqBOjjNCLgm-f_VQ3EDAMhMwEJnasw/edit?usp=sharing)
+
+
+3. The text file (e.g bkg_Rb102) which has background informations etc is in the following format,
+N0 N0LowerLimit	 N0UpperLimit
+bkg1 bkg1LowerLimit	bkg1UpperLimit
+bkg2 bkg2LowerLimit	bkg2UpperLimit
+bkg3 bkg3LowerLimit	bkg3UpperLimit
+neutronEfficiency
+Here, N0 refers to the total decay activities for the given isotopes, bkg1 is the background count from the decay histogram without any conditions from neutron measurement, bkg2 is the background count from the decay histogram when one neutron is detected and bkg3 is the background count from the decay histogram when two neutron is detected. 
+
+
+4.A different text file used to fixed the fitting parameter or to limit it withinerror bars. It is named as parSetting.txt and default one is saved as parSetting.txt.default. Here, first coulmn refers to the number of fitting parameter and in the second column '0' is used to fix the parameter and '1' is used to limit the parameter. 
+
+5.After the fitting two different files are created. One is the root file which has the decay histograms with fitting and residual inforamtion and another one has the information of newly measured half-life, P1n and P2n values. The later on also has the information of all the fitting parameters. These two files are stored inside the fittingResults
+
+
+------- TO DO LIST ----
+Aug 20, 2019
+1. Work on the residual after the fitting 
