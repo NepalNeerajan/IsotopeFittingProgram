@@ -97,7 +97,7 @@ Double_t F1NT(double *x, double *p){
     TF1::RejectPoint();
     return returnValue;
   }
-  Double_t  func = (funcA(x,p)*p[2]+funcB(x,p)*p[5]+funcC(x,p)*p[8]+funcE(x,p)*p[11]+funcF(x,p)*p[14])*p[23]+2*p[23]*(1-p[23])*(funcA(x,p)*p[3]+funcB(x,p)*p[6]+funcC(x,p)*p[9]);
+  Double_t  func = (funcA(x,p)*p[2]+funcB(x,p)*p[5]+funcC(x,p)*p[8]+funcE(x,p)*p[11]+funcF(x,p)*p[14])*p[23]+2*p[23]*(1-p[23])*(funcA(x,p)*p[3]+funcB(x,p)*p[6]+funcC(x,p)*p[9])+p[24]*FT(x,p);
   if(x[0]>0.0) returnValue += func;
   return returnValue;
 }
@@ -108,18 +108,18 @@ Double_t F2NT(double *x, double *p){
     TF1::RejectPoint();
     return returnValue;
   }
-  Double_t  func = p[23]*p[23]*(funcA(x,p)*p[3]+funcB(x,p)*p[6]+funcC(x,p)*p[9]);
+  Double_t  func = p[23]*p[23]*(funcA(x,p)*p[3]+funcB(x,p)*p[6]+funcC(x,p)*p[9])+p[25]*FT(x,p)+p[24]*F1NT(x,p);
   if(x[0]>0.0) returnValue += func;
   return returnValue;
 }
 
 //defination of shared parameter
 //total decay function
-int iparB[24] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23};
+int iparB[26] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25};
 //gate on p1n function
-int iparSB[24] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23};
+int iparSB[26] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25};
 //gate on p2n function
-int iparSB1[24] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23};
+int iparSB1[26] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25};
 
 struct GlobalChi2 {
   GlobalChi2( ROOT::Math::IMultiGenFunction &f1,
@@ -127,12 +127,12 @@ struct GlobalChi2 {
 	      ROOT::Math::IMultiGenFunction &f3) :
     fChi2_1(&f1), fChi2_2(&f2), fChi2_3(&f3) {}
   double operator() (const double *par) const{
-    double p1[24];
-    for(int i = 0; i<24; ++i) p1[i] = par[iparB[i]];
-    double p2[24];
-    for(int i = 0; i<24; ++i) p2[i] = par[iparSB[i]];
-    double p3[24];
-    for(int i = 0; i<24; ++i) p3[i] = par[iparSB1[i]];    
+    double p1[26];
+    for(int i = 0; i<26; ++i) p1[i] = par[iparB[i]];
+    double p2[26];
+    for(int i = 0; i<26; ++i) p2[i] = par[iparSB[i]];
+    double p3[26];
+    for(int i = 0; i<26; ++i) p3[i] = par[iparSB1[i]];    
     return (*fChi2_1)(p1) + (*fChi2_2)(p2) + (*fChi2_3)(p3);
   }
   const ROOT::Math::IMultiGenFunction *fChi2_1;
@@ -318,13 +318,26 @@ void FittingIsotope(TString isoName, Int_t AtNo, Int_t NeuNo, char *decayFile, c
   */
 
   TFile *in = new TFile(decayFile);
-  TH1F *decaycurve1 = (TH1F*)in->Get(isoName+"Decay");
-  TH1F *n1decaycurve1 = (TH1F*)in->Get(isoName+"Decay_1n_corrtd");
-  TH1F *n2decaycurve1 = (TH1F*)in->Get(isoName+"Decay_2n_corrtd");
+  TH1F *decaycurve = (TH1F*)in->Get(isoName+"Decay");
+  TH1F *n1decaycurve = (TH1F*)in->Get(isoName+"Decay_1n");
+  TH1F *n2decaycurve = (TH1F*)in->Get(isoName+"Decay_2n");
+TH1F *n1decay_bkg = (TH1F*)in->Get(isoName+"Decay_1n_bkg");
+TH1F *n2decay_bkg = (TH1F*)in->Get(isoName+"Decay_2n_bkg");
+
+Double_t id = decaycurve->Integral();
+Double_t id1n = n1decaycurve->Integral();
+Double_t id2n = n2decaycurve->Integral();
+Double_t id1nb = n1decay_bkg->Integral();
+Double_t id2nb = n2decay_bkg->Integral();
+Double_t r1 = id1nb/id;
+Double_t r2 = id2nb/id;
+cout<<"THE VALUE OF r1 = "<<r1<<endl;
+cout<<"THE VALUE OF r2 = "<<r2<<endl;
 
   //avoiding bins which has negative counts (replaced by ZERO)
-  Double_t n_bins = n1decaycurve1->GetXaxis()->GetNbins();
+  Double_t n_bins = n1decaycurve->GetXaxis()->GetNbins();
   cout<<"#####TOTAL NUMBER OF BINS IS = "<<n_bins<<endl;
+/* //commenting replacing negative bin method
   //create new histogram for 1n and 2n decay curve
   TH1F *n1decaycurve = new TH1F("n1decaycurve","decay curve with 1n emission", n1decaycurve1->GetNbinsX(), n1decaycurve1->GetXaxis()->GetXmin(), n1decaycurve1->GetXaxis()->GetXmax());
   for(Int_t i=1; i<n_bins+1; i++){
@@ -349,14 +362,18 @@ void FittingIsotope(TString isoName, Int_t AtNo, Int_t NeuNo, char *decayFile, c
     if(xy<0) decaycurve->SetBinContent(i,0);
     else if(xy==0 || xy>0) decaycurve->SetBinContent(i,xy);
   }
+*/
 
+//NEED TO CALCULATE INTEGRAL FROM BKG AND R1 AND 2
+//Double_t r1 = 0.001;
+//Double_t r2 = 0.0001;
   decaycurve->Rebin(rebi);
   n1decaycurve->Rebin(rebi);
   n2decaycurve->Rebin(rebi);
 
-  TF1 *ftotal = new TF1("ftotal",FT,st,et,24);
-  TF1 *f1n = new TF1("f1n",F1NT,st,et,24);
-  TF1 *f2n = new TF1("f2n",F2NT,st,et,24);
+  TF1 *ftotal = new TF1("ftotal",FT,st,et,26);
+  TF1 *f1n = new TF1("f1n",F1NT,st,et,26);
+  TF1 *f2n = new TF1("f2n",F2NT,st,et,26);
 
   //perform now global fit
   ROOT::Math::WrappedMultiTF1 wfB(*ftotal,1);
@@ -389,12 +406,12 @@ void FittingIsotope(TString isoName, Int_t AtNo, Int_t NeuNo, char *decayFile, c
 
   ROOT::Fit::Fitter fitter;
 
-  const int Npar = 24;
+  const int Npar = 26;
 
    //initializing the fit parameters!!!  
-  double par0[Npar] = {N0, act1, Pn1, Pnn1, act2, Pn2, Pnn2, act3, Pn3, Pnn3, act4, Pn4, Pnn4, act5, Pn5, Pnn5, act6, Pn6, Pnn6, act7, bkg1, bkg2, bkg3, neuEff};
+  double par0[Npar] = {N0, act1, Pn1, Pnn1, act2, Pn2, Pnn2, act3, Pn3, Pnn3, act4, Pn4, Pnn4, act5, Pn5, Pnn5, act6, Pn6, Pnn6, act7, bkg1, bkg2, bkg3, neuEff,r1,r2};
   
-  fitter.Config().SetParamsSettings(24, par0);
+  fitter.Config().SetParamsSettings(26, par0);
   
   //FIX or SETLIMITS CONDITIONS
   ifstream parSet;
@@ -465,13 +482,16 @@ void FittingIsotope(TString isoName, Int_t AtNo, Int_t NeuNo, char *decayFile, c
   if(parS[22]==0) fitter.Config().ParSettings(22).Fix();
   //neutron efficiency always fixed!!!
   if(parS[23]==0) fitter.Config().ParSettings(23).Fix();
+//random neutron correlations
+fitter.Config().ParSettings(24).Fix();
+fitter.Config().ParSettings(25).Fix();
 
   fitter.Config().MinimizerOptions().SetPrintLevel(0);
   fitter.Config().SetMinimizer("Minuit2","Migrad");
 
   //fit FCN function directly
   //specify optionally data size and flag to indicate that is a chi2 fit
-  fitter.FitFCN(24,GlobalChi2,0,dataB.Size()+dataSB.Size()+dataSB1.Size(),true);
+  fitter.FitFCN(26,GlobalChi2,0,dataB.Size()+dataSB.Size()+dataSB1.Size(),true);
   ROOT::Fit::FitResult result = fitter.Result();
   result.Print(std::cout);
 
@@ -544,7 +564,7 @@ void FittingIsotope(TString isoName, Int_t AtNo, Int_t NeuNo, char *decayFile, c
      //  double residual = (decaycurve->GetBinContent(i+1) - ftotal->Eval(decaycurve->GetBinCenter(i+1) )) / decaycurve->GetBinError(i+1);
      double residual = (decaycurve->GetBinContent(i+1) - ftotal->Eval(decaycurve->GetBinCenter(i+1) ));
     hist1->SetBinContent(i,residual);
-    hist1->SetBinError(i,1);
+   // hist1->SetBinError(i,1);
    }
 
    TH1F *hist2 = new TH1F("hist2","residual decay P1n",n1decaycurve->GetNbinsX(),n1decaycurve->GetXaxis()->GetXmin(),n2decaycurve->GetXaxis()->GetXmax());
@@ -552,7 +572,7 @@ void FittingIsotope(TString isoName, Int_t AtNo, Int_t NeuNo, char *decayFile, c
      //  double residual = (n1decaycurve->GetBinContent(i+1) - f1n->Eval(n1decaycurve->GetBinCenter(i+1) )) / n1decaycurve->GetBinError(i+1);
      double residual = (n1decaycurve->GetBinContent(i+1) - f1n->Eval(n1decaycurve->GetBinCenter(i+1) ));
     hist2->SetBinContent(i,residual);
-    hist2->SetBinError(i,1);
+    //hist2->SetBinError(i,1);
    }
 
    TH1F *hist3 = new TH1F("hist3","residual decay P2n",n2decaycurve->GetNbinsX(),n2decaycurve->GetXaxis()->GetXmin(),n2decaycurve->GetXaxis()->GetXmax());
@@ -560,12 +580,12 @@ void FittingIsotope(TString isoName, Int_t AtNo, Int_t NeuNo, char *decayFile, c
      //     double residual = (n2decaycurve->GetBinContent(i+1) - f2n->Eval(n2decaycurve->GetBinCenter(i+1) )) / n2decaycurve->GetBinError(i+1);
      double residual = (n2decaycurve->GetBinContent(i+1) - f2n->Eval(n2decaycurve->GetBinCenter(i+1) ));
     hist3->SetBinContent(i,residual);
-     hist3->SetBinError(i,1);
+    // hist3->SetBinError(i,1);
      //    cout<<"Bin Error at "<<i<<" is = "<<n2decaycurve->GetBinError(i+1)<<endl;
    }
-   hist1->Write("e1c");
-   hist2->Write("e1c");
-   hist3->Write("e1c");
+   hist1->Write("");
+   hist2->Write("");
+   hist3->Write("");
    //these histograms are not produced because the value of bin error is 0 when there is zero count
    /*/CHECK THIS AGAINNNN    
    TCanvas *cc2 = new TCanvas("cc2","cc2");
